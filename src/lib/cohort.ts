@@ -1,6 +1,6 @@
 /** Single source of truth for the cohort the site is currently selling. */
 export const COHORT = {
-  name: "September Cohort",
-  startsOn: "September 1",
-  price: "₹499",
+  name: "November Cohort",
+  startsOn: "November 1",
+  price: "₹199",
 } as const;

@@ -1,14 +1,18 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Reveal } from "@/components/site/Reveal";
 import { GoogleMark } from "@/components/site/GoogleMark";
+import { supabase } from "@/lib/supabase";
 
 const title = "Login or sign up — The21System";
 const description =
   "Log in or create your account with Google to reach your cohort home. Signing in never starts a payment.";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : "/",
+  }),
   head: () => ({
     meta: [
       { title },
@@ -24,19 +28,38 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-type State = "idle" | "loading" | "error" | "success" | "not-enrolled";
+type State = "idle" | "loading" | "error";
 
 function LoginPage() {
   const [state, setState] = useState<State>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
 
-  const signIn = () => {
+  const signIn = async () => {
     setState("loading");
-    window.setTimeout(() => {
-      // Demo flow: Google sign-in and the enrolment check are wired once the
-      // backend is enabled. Login NEVER initiates a payment.
-      setState("not-enrolled");
-    }, 1400);
+    setErrorMessage("");
+
+    try {
+      const destination =
+        redirect.startsWith("/") && !redirect.startsWith("//")
+          ? redirect
+          : "/";
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(destination)}`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      setState("error");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to start Google sign-in.",
+      );
+    }
   };
 
   const goHome = () => void navigate({ to: "/" });
@@ -60,50 +83,28 @@ function LoginPage() {
 
         <Reveal delay={0.1}>
           <h1 className="mt-10 font-display text-[2rem] leading-[1.06] font-extralight text-night-foreground text-balance-tight sm:text-4xl">
-            {state === "success"
-              ? "Welcome back."
-              : state === "not-enrolled"
-                ? "No cohort found yet."
-                : "Login or sign up."}
+            Login or sign up.
           </h1>
         </Reveal>
 
         <Reveal delay={0.2}>
           <p className="mt-5 text-[0.95rem] leading-relaxed font-light text-night-muted">
-            {state === "success"
-              ? "Taking you to your cohort home."
-              : state === "not-enrolled"
-                ? "This account isn't enrolled in a cohort. You can read more and reserve a place whenever you're ready."
-                : "New here or returning — one account for your nights, your progress, your circle."}
+            New here or returning — one account for your nights, your progress, your circle.
           </p>
         </Reveal>
 
         <Reveal delay={0.3}>
           <div className="mt-10" aria-live="polite">
-            {state === "not-enrolled" ? (
-              <button
-                type="button"
-                onClick={goHome}
-                className="flex min-h-13 w-full items-center justify-center gap-3 border border-night-hairline bg-night-surface px-6 text-[0.8rem] tracking-[0.12em] text-night-foreground uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:border-gold/50"
-              >
-                Back to The21System
-              </button>
-            ) : (
-              <button
+            <button
               type="button"
               onClick={signIn}
-              disabled={state === "loading" || state === "success"}
+              disabled={state === "loading"}
               className="group flex min-h-13 w-full items-center justify-center gap-3 border border-night-hairline bg-night-surface px-6 text-[0.8rem] tracking-[0.12em] text-night-foreground uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:border-gold/50 disabled:cursor-wait disabled:opacity-70"
             >
               {state === "loading" ? (
                 <>
                   <span className="size-3 animate-ping rounded-full bg-gold" />
-                  Signing you in
-                </>
-              ) : state === "success" ? (
-                <>
-                  <span className="size-2 rounded-full bg-success" />
-                  Signed in
+                  Connecting to Google
                 </>
               ) : (
                 <>
@@ -111,12 +112,11 @@ function LoginPage() {
                   Continue with Google
                 </>
               )}
-              </button>
-            )}
+            </button>
 
             {state === "error" ? (
-              <p className="mt-4 text-[0.8rem] font-light text-destructive">
-                That didn't go through. Try once more.
+              <p className="mt-4 break-words text-[0.8rem] font-light text-destructive">
+                Google sign-in could not start: {errorMessage}
               </p>
             ) : null}
 

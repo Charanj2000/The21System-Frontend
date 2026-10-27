@@ -25,7 +25,8 @@ const structuredData = {
       "@type": "Organization",
       "@id": "#organization",
       name: "The21System",
-      description: "Cohort-based sleep and evening rituals for people who think for a living.",
+      description:
+        "Cohort-based sleep and evening rituals for people who think for a living.",
       email: "hello@the21system.com",
     },
     {
@@ -65,7 +66,7 @@ export const Route = createFileRoute("/")({
     ],
     links: [
       { rel: "canonical", href: "/" },
-      { rel: "preload", as: "image", href: heroNight, fetchpriority: "high" },
+      { rel: "preload", as: "image", href: heroNight, fetchPriority: "high" },
     ],
     scripts: [
       { type: "application/ld+json", children: JSON.stringify(structuredData) },

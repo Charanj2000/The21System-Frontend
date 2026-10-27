@@ -4,14 +4,27 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { Check, Hash, Loader2, Lock, MessageCircle, PlayCircle, RefreshCw, Users, X } from "lucide-react";
+import {
+  Check,
+  Hash,
+  Loader2,
+  Lock,
+  MessageCircle,
+  PlayCircle,
+  RefreshCw,
+  Users,
+  X,
+} from "lucide-react";
 
 import { Reveal } from "@/components/site/Reveal";
 import { COHORT } from "@/lib/cohort";
+import { supabase } from "@/lib/supabase";
+import { createSleepResetOrder, verifySleepResetPayment } from "@/lib/payments";
+import { loadRazorpayCheckout } from "@/lib/razorpay";
 
 const title = "Checkout — The 21-Day Sleep Reset";
 const description =
-  "Reserve your place in the September cohort of The 21-Day Sleep Reset. One payment of ₹499, secure Razorpay checkout.";
+  "Reserve your place in The 21-Day Sleep Reset. Secure Razorpay checkout.";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -41,18 +54,27 @@ const included = [
 ] as const;
 
 const reservationSchema = z.object({
-  name: z.string().trim().min(2, "Please enter your full name.").max(80, "That name is too long."),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Please enter your full name.")
+    .max(80, "That name is too long."),
   email: z
     .string()
     .trim()
     .min(1, "We need an email to send your nights to.")
     .email("That doesn't look like an email address."),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number."),
 });
 
 type Reservation = z.infer<typeof reservationSchema>;
 
 function CheckoutPage() {
   const [state, setState] = useState<PayState>("idle");
+
   const {
     register,
     handleSubmit,
@@ -60,22 +82,91 @@ function CheckoutPage() {
   } = useForm<Reservation>({
     resolver: zodResolver(reservationSchema),
     mode: "onBlur",
-    defaultValues: { name: "", email: "" },
+    defaultValues: { name: "", email: "", phone: "" },
   });
 
   const busy = state === "opening" || state === "processing";
 
-  // Front-end preview of the Razorpay handshake. Wiring a real order requires
-  // a backend; the states below mirror exactly what the live flow reports.
-  const startPayment = () => {
+  const startPayment = async (reservation: Reservation) => {
     setState("opening");
-    window.setTimeout(() => setState("processing"), 1100);
-    window.setTimeout(() => setState("success"), 3000);
+
+    try {
+      const cohortId = import.meta.env.VITE_SLEEP_RESET_COHORT_ID;
+
+      if (!cohortId) {
+        throw new Error(
+          "The November cohort is not configured. Please try again later.",
+        );
+      }
+
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError) throw sessionError;
+
+      if (!sessionData.session) {
+        throw new Error("Please sign in with Google before checking out.");
+      }
+
+      setState("processing");
+
+      const order = await createSleepResetOrder(cohortId);
+
+      await loadRazorpayCheckout();
+
+      if (!window.Razorpay) {
+        throw new Error("Razorpay checkout could not be initialized.");
+      }
+
+      const checkout = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "The 21 System",
+        description: `The 21-Day Sleep Reset — ${COHORT.name}`,
+        order_id: order.order_id,
+        prefill: {
+          name: reservation.name,
+          email: reservation.email,
+          contact: reservation.phone,
+        },
+        theme: { color: "#C6A96B" },
+
+        handler: async (response) => {
+          setState("processing");
+
+          try {
+            await verifySleepResetPayment(response);
+            setState("success");
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            setState("failed");
+          }
+        },
+
+        modal: {
+          ondismiss: () => {
+            setState("failed");
+          },
+        },
+      });
+
+      checkout.open();
+    } catch (error) {
+      console.error("Checkout error:", error);
+      setState("failed");
+    }
   };
 
   return (
-    <main id="content" className="relative min-h-dvh bg-night px-6 py-16 md:px-10 md:py-24">
-      <div aria-hidden className="halo -top-20 left-[8%] h-80 w-80 animate-breathe" />
+    <main
+      id="content"
+      className="relative min-h-dvh bg-night px-6 py-16 md:px-10 md:py-24"
+    >
+      <div
+        aria-hidden
+        className="halo -top-20 left-[8%] h-80 w-80 animate-breathe"
+      />
 
       <div className="relative mx-auto max-w-5xl">
         <Reveal>
@@ -92,11 +183,13 @@ function CheckoutPage() {
             <Reveal>
               <p className="eyebrow text-gold">Your reservation</p>
             </Reveal>
+
             <Reveal delay={0.1}>
               <h1 className="mt-5 font-display text-[2rem] leading-[1.06] font-extralight text-night-foreground text-balance-tight sm:text-4xl">
                 The 21-Day Sleep Reset
               </h1>
             </Reveal>
+
             <Reveal delay={0.15}>
               <p className="mt-4 text-[0.8rem] tracking-[0.16em] text-gold uppercase">
                 {COHORT.name} · begins {COHORT.startsOn}
@@ -110,8 +203,14 @@ function CheckoutPage() {
                     key={item}
                     className="flex items-center gap-4 border-b border-night-hairline py-4"
                   >
-                    <Check className="size-4 shrink-0 text-gold" strokeWidth={1.25} aria-hidden />
-                    <span className="text-[0.95rem] font-light text-night-muted">{item}</span>
+                    <Check
+                      className="size-4 shrink-0 text-gold"
+                      strokeWidth={1.25}
+                      aria-hidden
+                    />
+                    <span className="text-[0.95rem] font-light text-night-muted">
+                      {item}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -119,8 +218,13 @@ function CheckoutPage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 flex items-start gap-3 text-[0.78rem] leading-relaxed font-light text-night-muted">
-                <Users className="mt-0.5 size-4 shrink-0 text-gold" strokeWidth={1.25} aria-hidden />
-                You&rsquo;re reserving a place. The cohort starts together on {COHORT.startsOn}.
+                <Users
+                  className="mt-0.5 size-4 shrink-0 text-gold"
+                  strokeWidth={1.25}
+                  aria-hidden
+                />
+                You&rsquo;re reserving a place. The cohort starts together on{" "}
+                {COHORT.startsOn}.
               </p>
             </Reveal>
           </div>
@@ -159,6 +263,7 @@ function CheckoutPage() {
                   error={errors.name?.message}
                   {...register("name")}
                 />
+
                 <Field
                   id="email"
                   label="Email"
@@ -167,6 +272,18 @@ function CheckoutPage() {
                   autoComplete="email"
                   error={errors.email?.message}
                   {...register("email")}
+                />
+
+                <Field
+                  id="phone"
+                  label="Mobile number"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  placeholder="10-digit mobile number"
+                  maxLength={10}
+                  error={errors.phone?.message}
+                  {...register("phone")}
                 />
 
                 <button
@@ -186,26 +303,32 @@ function CheckoutPage() {
               <p className="mt-5 text-center text-[0.72rem] font-light text-night-muted">
                 UPI · Cards · Netbanking · Wallets
               </p>
+
               <p className="mt-3 text-center text-[0.72rem] leading-relaxed font-light text-night-muted">
-                We only email you about your cohort. Cancel any time before {COHORT.startsOn} for a
-                full refund.
+                We only email you about your cohort. Cancel any time before{" "}
+                {COHORT.startsOn} for a full refund.
               </p>
             </aside>
           </Reveal>
         </div>
       </div>
 
-      <PaymentOverlay state={state} onClose={() => setState("idle")} onRetry={startPayment} />
+      <PaymentOverlay
+        state={state}
+        onClose={() => setState("idle")}
+        onRetry={startPayment}
+      />
     </main>
   );
 }
 
-function Field({
-  id,
-  label,
-  error,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { id: string; label: string; error?: string }) {
+type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  id: string;
+  label: string;
+  error?: string;
+};
+
+function Field({ id, label, error, ...props }: FieldProps) {
   return (
     <div>
       <label
@@ -214,6 +337,7 @@ function Field({
       >
         {label}
       </label>
+
       <input
         id={id}
         name={id}
@@ -224,8 +348,12 @@ function Field({
         }`}
         {...props}
       />
+
       {error ? (
-        <p id={`${id}-error`} className="mt-2 text-[0.78rem] font-light text-destructive">
+        <p
+          id={`${id}-error`}
+          className="mt-2 text-[0.78rem] font-light text-destructive"
+        >
           {error}
         </p>
       ) : null}
@@ -240,19 +368,19 @@ function PaymentOverlay({
 }: {
   state: PayState;
   onClose: () => void;
-  onRetry: () => void;
+  onRetry: (reservation: Reservation) => void;
 }) {
   const open = state !== "idle";
   const busy = state === "opening" || state === "processing";
   const reduced = useReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Focus the panel when it opens, keep focus inside, and allow Escape out —
-  // but never while a payment is mid-flight.
   useEffect(() => {
     if (!open) return;
+
     const previous = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
+
     const { style } = document.body;
     const prevOverflow = style.overflow;
     style.overflow = "hidden";
@@ -263,13 +391,18 @@ function PaymentOverlay({
         onClose();
         return;
       }
+
       if (event.key !== "Tab") return;
+
       const focusables = panelRef.current?.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
       );
+
       if (!focusables?.length) return;
+
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
+
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
@@ -280,6 +413,7 @@ function PaymentOverlay({
     };
 
     document.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       style.overflow = prevOverflow;
@@ -306,18 +440,26 @@ function PaymentOverlay({
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: reduced ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] }}
+            transition={{
+              duration: reduced ? 0 : 0.7,
+              ease: [0.22, 1, 0.36, 1],
+            }}
             className="relative my-auto w-full max-w-sm border border-night-hairline bg-night-surface p-8 text-center outline-none"
           >
             <div aria-live="polite" aria-atomic="true">
               {busy ? (
                 <>
-                  <Loader2 className="mx-auto size-6 animate-spin text-gold" aria-hidden />
+                  <Loader2
+                    className="mx-auto size-6 animate-spin text-gold"
+                    aria-hidden
+                  />
                   <h2
                     id="payment-status-title"
                     className="mt-8 font-display text-2xl font-light text-night-foreground"
                   >
-                    {state === "opening" ? "Opening Razorpay" : "Confirming your payment"}
+                    {state === "opening"
+                      ? "Opening Razorpay"
+                      : "Confirming your payment"}
                   </h2>
                   <p className="mt-4 text-[0.85rem] font-light text-night-muted">
                     Stay on this page. This takes a few seconds.
@@ -328,7 +470,11 @@ function PaymentOverlay({
               {state === "success" ? (
                 <>
                   <span className="mx-auto flex size-11 items-center justify-center rounded-full border border-gold/40">
-                    <Check className="size-5 text-gold" strokeWidth={1.5} aria-hidden />
+                    <Check
+                      className="size-5 text-gold"
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
                   </span>
                   <h2
                     id="payment-status-title"
@@ -337,16 +483,20 @@ function PaymentOverlay({
                     You&rsquo;re in.
                   </h2>
                   <p className="mt-4 text-[0.85rem] leading-relaxed font-light text-night-muted">
-                    Your place in the {COHORT.name} has been reserved. A confirmation email is on
-                    its way.
+                    Your place in the {COHORT.name} has been reserved. A
+                    confirmation email is on its way.
                   </p>
+
                   <ul className="mt-7 space-y-3 text-left">
                     {[
                       { icon: MessageCircle, label: "Join WhatsApp" },
                       { icon: Hash, label: "Join Discord" },
                       { icon: Users, label: "Meet your cohort" },
                       { icon: PlayCircle, label: "Watch your welcome video" },
-                      { icon: Check, label: `Programme begins ${COHORT.startsOn}` },
+                      {
+                        icon: Check,
+                        label: `Programme begins ${COHORT.startsOn}`,
+                      },
                     ].map(({ icon: Icon, label }) => (
                       <li
                         key={label}
@@ -361,6 +511,7 @@ function PaymentOverlay({
                       </li>
                     ))}
                   </ul>
+
                   <Link
                     to="/"
                     className="mt-8 inline-flex min-h-12 w-full items-center justify-center bg-gold px-8 text-[0.8rem] tracking-[0.14em] text-night uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:bg-gold-hover"
@@ -373,7 +524,11 @@ function PaymentOverlay({
               {state === "failed" ? (
                 <>
                   <span className="mx-auto flex size-11 items-center justify-center rounded-full border border-night-hairline">
-                    <X className="size-5 text-night-muted" strokeWidth={1.5} aria-hidden />
+                    <X
+                      className="size-5 text-night-muted"
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
                   </span>
                   <h2
                     id="payment-status-title"
@@ -382,15 +537,25 @@ function PaymentOverlay({
                     That payment didn&rsquo;t go through.
                   </h2>
                   <p className="mt-4 text-[0.85rem] leading-relaxed font-light text-night-muted">
-                    Nothing was charged. You can try again whenever you&rsquo;re ready, or write to
-                    billing@the21system.com.
+                    If you completed a payment, please contact
+                    billing@the21system.com before trying again.
                   </p>
+
                   <button
                     type="button"
-                    onClick={onRetry}
+                    onClick={() => {
+                      onClose();
+                      document
+                        .querySelector<HTMLFormElement>("form")
+                        ?.requestSubmit();
+                    }}
                     className="mt-8 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-gold px-8 text-[0.8rem] tracking-[0.14em] text-night uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:bg-gold-hover"
                   >
-                    <RefreshCw className="size-3.5" strokeWidth={1.5} aria-hidden />
+                    <RefreshCw
+                      className="size-3.5"
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
                     Try again
                   </button>
                 </>
