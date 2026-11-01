@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "@/lib/useSession";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
 });
 
-type PayState = "idle" | "opening" | "processing" | "success" | "failed";
+type PayState = "idle" | "opening" | "processing" | "success" | "failed" | "cancelled";
 
 const included = [
   "21-day guided journey",
@@ -74,6 +75,18 @@ type Reservation = z.infer<typeof reservationSchema>;
 
 function CheckoutPage() {
   const [state, setState] = useState<PayState>("idle");
+  const { session, loading: sessionLoading } = useSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!sessionLoading && !session) {
+      void navigate({
+        to: "/login",
+        search: { redirect: "/checkout" },
+        replace: true,
+      });
+    }
+  }, [sessionLoading, session, navigate]);
 
   const {
     register,
@@ -86,19 +99,13 @@ function CheckoutPage() {
   });
 
   const busy = state === "opening" || state === "processing";
+  const lastReservationRef = useRef<Reservation | null>(null);
 
   const startPayment = async (reservation: Reservation) => {
+    lastReservationRef.current = reservation;
     setState("opening");
 
     try {
-      const cohortId = import.meta.env.VITE_SLEEP_RESET_COHORT_ID;
-
-      if (!cohortId) {
-        throw new Error(
-          "The November cohort is not configured. Please try again later.",
-        );
-      }
-
       const { data: sessionData, error: sessionError } =
         await supabase.auth.getSession();
 
@@ -110,7 +117,20 @@ function CheckoutPage() {
 
       setState("processing");
 
-      const order = await createSleepResetOrder(cohortId);
+      const { error: profileError } = await supabase.from("profiles").upsert({
+        id: sessionData.session.user.id,
+        full_name: reservation.name,
+        email: reservation.email,
+        phone: reservation.phone,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (profileError) {
+        console.error("Profile upsert failed:", profileError);
+        throw new Error("Could not save your contact details. Please try again.");
+      }
+
+      const order = await createSleepResetOrder();
 
       await loadRazorpayCheckout();
 
@@ -146,7 +166,7 @@ function CheckoutPage() {
 
         modal: {
           ondismiss: () => {
-            setState("failed");
+            setState("cancelled");
           },
         },
       });
@@ -157,6 +177,19 @@ function CheckoutPage() {
       setState("failed");
     }
   };
+
+  if (sessionLoading || !session) {
+    return (
+      <main
+        id="content"
+        className="relative flex min-h-dvh items-center justify-center bg-night px-6 py-16 md:px-10 md:py-24"
+      >
+        <p className="text-[0.8rem] tracking-[0.14em] text-night-muted uppercase">
+          {sessionLoading ? "Checking your session…" : "Redirecting to sign in…"}
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -296,7 +329,7 @@ function CheckoutPage() {
                   ) : (
                     <Lock className="size-3.5" strokeWidth={1.5} aria-hidden />
                   )}
-                  {state === "failed" ? "Try again" : "Reserve with Razorpay"}
+                  Reserve with Razorpay
                 </button>
               </form>
 
@@ -316,7 +349,11 @@ function CheckoutPage() {
       <PaymentOverlay
         state={state}
         onClose={() => setState("idle")}
-        onRetry={startPayment}
+        onRetry={() => {
+          const last = lastReservationRef.current;
+          if (last) void startPayment(last);
+          else setState("idle");
+        }}
       />
     </main>
   );
@@ -368,7 +405,7 @@ function PaymentOverlay({
 }: {
   state: PayState;
   onClose: () => void;
-  onRetry: (reservation: Reservation) => void;
+  onRetry: () => void;
 }) {
   const open = state !== "idle";
   const busy = state === "opening" || state === "processing";
@@ -521,6 +558,40 @@ function PaymentOverlay({
                 </>
               ) : null}
 
+              {state === "cancelled" ? (
+                <>
+                  <span className="mx-auto flex size-11 items-center justify-center rounded-full border border-night-hairline">
+                    <X
+                      className="size-5 text-night-muted"
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
+                  </span>
+                  <h2
+                    id="payment-status-title"
+                    className="mt-8 font-display text-2xl font-light text-night-foreground"
+                  >
+                    Payment cancelled.
+                  </h2>
+                  <p className="mt-4 text-[0.85rem] leading-relaxed font-light text-night-muted">
+                    No charge was made. You can reserve your spot whenever you&rsquo;re ready.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="mt-8 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-gold px-8 text-[0.8rem] tracking-[0.14em] text-night uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:bg-gold-hover"
+                  >
+                    <RefreshCw
+                      className="size-3.5"
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
+                    Try again
+                  </button>
+                </>
+              ) : null}
+
               {state === "failed" ? (
                 <>
                   <span className="mx-auto flex size-11 items-center justify-center rounded-full border border-night-hairline">
@@ -537,18 +608,12 @@ function PaymentOverlay({
                     That payment didn&rsquo;t go through.
                   </h2>
                   <p className="mt-4 text-[0.85rem] leading-relaxed font-light text-night-muted">
-                    If you completed a payment, please contact
-                    billing@the21system.com before trying again.
+                    If you were charged, email billing@the21system.com before retrying. Otherwise you can try again now.
                   </p>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      onClose();
-                      document
-                        .querySelector<HTMLFormElement>("form")
-                        ?.requestSubmit();
-                    }}
+                    onClick={onRetry}
                     className="mt-8 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-gold px-8 text-[0.8rem] tracking-[0.14em] text-night uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:bg-gold-hover"
                   >
                     <RefreshCw

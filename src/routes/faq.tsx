@@ -11,7 +11,7 @@ import { SkipLink } from "@/components/site/SkipLink";
 import { Nav } from "@/components/site/Nav";
 import { PageHeader } from "@/components/site/PageHeader";
 import { Reveal } from "@/components/site/Reveal";
-import { FAQS } from "@/lib/faqs";
+import { getFaqs } from "@/lib/faqs";
 
 const title = "FAQ — The 21-Day Sleep Reset | The21System";
 const description =
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/faq")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "FAQPage",
-          mainEntity: FAQS.map(({ q, a }) => ({
+          mainEntity: getFaqs().map(({ q, a }) => ({
             "@type": "Question",
             name: q,
             acceptedAnswer: { "@type": "Answer", text: a },
@@ -59,9 +59,9 @@ function FaqPage() {
         <section className="bg-ivory px-6 py-24 md:px-10 md:py-32">
           <div className="mx-auto max-w-3xl">
             <Reveal>
-              <Accordion type="single" collapsible className="border-t border-border">
-                {FAQS.map(({ q, a }) => (
-                  <AccordionItem key={q} value={q} className="border-b border-border">
+              <Accordion type="single" collapsible className="border-t border-ink/15">
+                {getFaqs().map(({ q, a }) => (
+                  <AccordionItem key={q} value={q} className="border-b border-ink/15">
                     <AccordionTrigger className="py-6 text-left font-display text-lg font-light text-ink hover:no-underline">
                       {q}
                     </AccordionTrigger>

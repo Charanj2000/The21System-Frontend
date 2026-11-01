@@ -119,23 +119,21 @@ async function requireAuthenticatedSession() {
 }
 
 export async function createSleepResetOrder(
-  cohortId: string,
+  cohortId?: string,
 ): Promise<CreatedPaymentOrder> {
-  if (!cohortId?.trim()) {
-    throw new Error("A valid cohort must be selected before checkout.");
-  }
-
   await requireAuthenticatedSession();
 
   let data: PaymentFunctionResponse | null;
   let error: unknown;
 
   try {
+    const body: Record<string, string> = { product_slug: "sleep-reset" };
+    if (cohortId?.trim()) {
+      body.cohort_id = cohortId.trim();
+    }
+
     const result = await supabase.functions.invoke("create-order", {
-      body: {
-        product_slug: "sleep-reset",
-        cohort_id: cohortId,
-      },
+      body,
     });
 
     data = result.data as PaymentFunctionResponse | null;

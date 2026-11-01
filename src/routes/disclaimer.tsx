@@ -74,7 +74,7 @@ function DisclaimerPage() {
       eyebrow="Disclaimer"
       title="A routine, not a treatment."
       intro="What this programme is — and what it is not."
-      updated="August 2026"
+      updated="November 2026"
       blocks={blocks}
     />
   );

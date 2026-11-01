@@ -101,7 +101,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Inter:wght@300..600&family=Caveat:wght@400..600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Caveat:wght@400..600&display=swap",
       },
       {
         rel: "stylesheet",
@@ -135,8 +135,46 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <SmoothScrollProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </SmoothScrollProvider>
     </QueryClientProvider>
   );
 }
+
+function SmoothScrollProvider({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Respect reduced motion + touch devices — skip the lib entirely.
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    if (reduced || !fine) return;
+
+    let rafId = 0;
+    let lenisInstance: { raf: (t: number) => void; destroy: () => void } | null = null;
+
+    void import("lenis").then((mod) => {
+      const Lenis = mod.default;
+      lenisInstance = new Lenis({
+        lerp: 0.09,
+        wheelMultiplier: 1.0,
+        touchMultiplier: 1.2,
+      }) as unknown as { raf: (t: number) => void; destroy: () => void };
+
+      const raf = (time: number) => {
+        lenisInstance?.raf(time);
+        rafId = requestAnimationFrame(raf);
+      };
+      rafId = requestAnimationFrame(raf);
+    });
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      lenisInstance?.destroy();
+    };
+  }, []);
+
+  return <>{children}</>;
+}
+

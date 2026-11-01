@@ -1,9 +1,10 @@
 ﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Reveal } from "@/components/site/Reveal";
 import { GoogleMark } from "@/components/site/GoogleMark";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/useSession";
 
 const title = "Login or sign up — The21System";
 const description =
@@ -35,6 +36,13 @@ function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
+  const { session, loading: sessionLoading } = useSession();
+
+  useEffect(() => {
+    if (sessionLoading || !session) return;
+    const safe = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/";
+    void navigate({ to: safe, replace: true });
+  }, [session, sessionLoading, redirect, navigate]);
 
   const signIn = async () => {
     setState("loading");
@@ -130,9 +138,14 @@ function LoginPage() {
           <div className="mt-12 border-t border-night-hairline pt-6">
             <p className="text-[0.8rem] font-light text-night-muted">
               Not enrolled yet?{" "}
-              <Link to="/checkout" className="text-gold transition-colors hover:text-gold-hover">
-                Reserve your spot
-              </Link>
+              <button
+                type="button"
+                onClick={signIn}
+                disabled={state === "loading"}
+                className="text-gold underline-offset-4 transition-colors hover:text-gold-hover hover:underline disabled:opacity-60"
+              >
+                Sign in to reserve your spot
+              </button>
             </p>
           </div>
         </Reveal>

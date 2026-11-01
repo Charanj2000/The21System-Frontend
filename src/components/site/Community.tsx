@@ -1,5 +1,7 @@
 import { Video } from "lucide-react";
+import { addDays, format, parseISO } from "date-fns";
 
+import { COHORT } from "@/lib/cohort";
 import { Reveal } from "./Reveal";
 
 const whatsapp = [
@@ -14,13 +16,17 @@ const discord = [
   { channel: "# ask-the-coach", note: "Answered every evening" },
 ];
 
-const sessions = [
-  { date: "Mon, 1 Sep", title: "Opening night — meet your cohort", time: "8:30 pm IST · 45 min" },
-  { date: "Sun, 7 Sep", title: "Week 1 review & Q&A", time: "9:00 pm IST · 45 min" },
-  { date: "Sun, 14 Sep", title: "Sleep coaching — evenings that hold", time: "8:30 pm IST · 45 min" },
-];
+function getSessions() {
+  const start = parseISO(`${COHORT.startDate}T00:00:00Z`);
+  return [
+    { date: format(start, "EEE, d MMM"), title: "Opening night — meet your cohort", time: "8:30 pm IST · 45 min" },
+    { date: format(addDays(start, 6), "EEE, d MMM"), title: "Week 1 review & Q&A", time: "9:00 pm IST · 45 min" },
+    { date: format(addDays(start, 13), "EEE, d MMM"), title: "Sleep coaching — evenings that hold", time: "8:30 pm IST · 45 min" },
+  ];
+}
 
 export function Community() {
+  const sessions = getSessions();
   return (
     <section
       id="community"

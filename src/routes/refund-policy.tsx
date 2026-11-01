@@ -69,7 +69,7 @@ function RefundPolicyPage() {
       eyebrow="Refund policy"
       title="Finish it. If nothing changed, we refund you."
       intro="Clear terms, written in plain language."
-      updated="August 2026"
+      updated="November 2026"
       blocks={blocks}
     />
   );

@@ -4,10 +4,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { HOME_FAQS } from "@/lib/faqs";
+import { getHomeFaqs } from "@/lib/faqs";
 import { Reveal } from "./Reveal";
 
 export function Faq() {
+  const homeFaqs = getHomeFaqs();
   return (
     <section className="section-y-tight bg-ivory px-6 md:px-10">
       <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[1fr_1.4fr] md:gap-14">
@@ -15,9 +16,9 @@ export function Faq() {
           <p className="eyebrow text-gold-hover">Questions</p>
         </Reveal>
         <Reveal delay={0.1}>
-          <Accordion type="single" collapsible className="border-t border-border">
-            {HOME_FAQS.map(({ q, a }) => (
-              <AccordionItem key={q} value={q} className="border-b border-border">
+          <Accordion type="single" collapsible className="border-t border-ink/15">
+            {homeFaqs.map(({ q, a }) => (
+              <AccordionItem key={q} value={q} className="border-b border-ink/15">
                 <AccordionTrigger className="py-5 text-left font-display text-lg font-light text-ink transition-colors duration-500 ease-calm hover:text-gold-hover hover:no-underline">
                   {q}
                 </AccordionTrigger>

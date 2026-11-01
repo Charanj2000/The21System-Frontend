@@ -1,8 +1,8 @@
-import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 
 import { COHORT } from "@/lib/cohort";
 import { Reveal } from "./Reveal";
+import { ReserveButton } from "./ReserveButton";
 
 const included = [
   "21-day guided journey",
@@ -58,18 +58,7 @@ export function Pricing() {
 
         <Reveal delay={0.28}>
           <div className="mt-10 text-center">
-            <Link
-              to="/checkout"
-              className="group inline-flex min-h-14 items-center gap-4 rounded-full bg-gold pr-6 pl-8 text-[0.78rem] tracking-[0.18em] text-night uppercase shadow-[0_20px_50px_-26px_var(--color-gold)] transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:bg-gold-hover"
-            >
-              <span>Reserve your spot</span>
-              <span
-                aria-hidden
-                className="grid size-7 place-items-center rounded-full bg-night/12 transition-transform duration-500 ease-calm group-hover:translate-x-1"
-              >
-                →
-              </span>
-            </Link>
+            <ReserveButton />
             <p className="mt-6 text-[0.75rem] tracking-[0.2em] text-gold uppercase">
               Next cohort begins {COHORT.startsOn}
             </p>

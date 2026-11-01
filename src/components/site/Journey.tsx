@@ -1,157 +1,130 @@
-import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useSpring } from "motion/react";
-
 import dawn from "@/assets/journey-dawn.jpg";
 import ritual from "@/assets/journey-ritual.jpg";
 import morningLight from "@/assets/morning-light.jpg";
 import circle from "@/assets/community-circle.jpg";
-import { Reveal } from "./Reveal";
 
 type Chapter = {
+  n: string;
   mark: string;
   title: string;
   note: string;
-  img?: string;
-  alt?: string;
-  dark: boolean;
+  img: string;
+  alt: string;
 };
 
 const chapters: Chapter[] = [
   {
-    mark: "Night 1",
+    n: "01",
+    mark: "Night 01",
     title: "Recognition.",
-    note: "Nothing is wrong with you. Your evening simply never learned where to end.",
+    note: "Nothing is wrong with you. Your evening never learned where to end.",
     img: ritual,
     alt: "A hand setting a small notebook beside a warm bedside lamp at night",
-    dark: true,
   },
   {
-    mark: "Night 4",
+    n: "04",
+    mark: "Night 04",
     title: "First quiet morning.",
     note: "You notice it in the morning, not in the night. Something simply felt softer.",
     img: dawn,
     alt: "First pale dawn light falling across a linen bedsheet",
-    dark: true,
   },
   {
+    n: "12",
     mark: "Night 12",
     title: "The mind slows naturally.",
     note: "Light, caffeine and screens have quietly found their places.",
     img: morningLight,
     alt: "Soft morning light through sheer linen curtains",
-    dark: false,
   },
   {
+    n: "21",
     mark: "Night 21",
     title: "Morning becomes effortless.",
     note: "The hours before midnight are yours again, and you wake before the alarm.",
     img: circle,
     alt: "Three friends together in warm, unhurried morning light",
-    dark: false,
   },
 ];
 
 export function Journey() {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduced = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 70%", "end 60%"] });
-  const rail = useSpring(scrollYProgress, { stiffness: 60, damping: 24, mass: 0.6 });
-
   return (
     <section
       id="nights"
-      className="relative overflow-hidden bg-[linear-gradient(to_bottom,var(--color-night)_0%,var(--color-night)_44%,var(--color-night-surface)_56%,var(--color-ivory)_70%,var(--color-ivory)_100%)]"
+      className="relative isolate overflow-hidden bg-night text-night-foreground"
     >
-      <div aria-hidden className="halo top-[12%] -left-24 size-[26rem] opacity-40" />
+      <span aria-hidden className="grain" />
 
-      <div className="section-y mx-auto max-w-5xl px-6 md:px-10">
-        <div className="max-w-2xl">
-          <Reveal>
-            <p className="eyebrow text-gold">Twenty-one nights</p>
-          </Reveal>
-          <Reveal delay={0.08}>
-            <h2 className="mt-6 font-display text-[2rem] leading-[1.1] font-extralight text-night-foreground text-balance-tight sm:text-5xl">
-              It doesn&rsquo;t arrive all at once.
-              <span className="block text-night-muted">It arrives quietly.</span>
-            </h2>
-          </Reveal>
+      <div className="mx-auto max-w-[1400px] px-5 py-20 md:px-10 md:py-28">
+        {/* Header row — tight */}
+        <div className="flex flex-wrap items-end justify-between gap-y-3 border-b border-night-foreground pb-5">
+          <span className="font-display text-xs font-medium tracking-tight uppercase">
+            / 21 nights · 4 chapters
+          </span>
+          <span className="font-display text-xs font-medium tracking-tight text-night-foreground/60 uppercase">
+            scroll →
+          </span>
         </div>
 
-        <div ref={ref} className="relative mt-12 md:mt-16">
-          <div
-            aria-hidden
-            className="absolute top-0 bottom-0 left-[7px] w-px bg-gold/20 md:left-1/2 md:-translate-x-1/2"
-          />
-          <motion.div
-            aria-hidden
-            style={{ scaleY: reduced ? 1 : rail }}
-            className="absolute top-0 bottom-0 left-[7px] w-px origin-top bg-gradient-to-b from-gold/70 to-gold/20 md:left-1/2 md:-translate-x-1/2"
-          />
+        <h2 className="display-md mt-8 max-w-3xl md:mt-10">
+          it arrives{" "}
+          <span className="font-serif italic font-normal text-gold">quietly</span>
+          <span className="text-night-foreground/40"> — not all at once.</span>
+        </h2>
 
-          <ol className="space-y-12 md:space-y-16">
-            {chapters.map((c, i) => {
-              const flip = i % 2 === 1;
-              return (
-                <Reveal as="li" key={c.mark} delay={0.05}>
-                  <div className="relative grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 md:grid-cols-2 md:gap-x-16">
-                    <span
-                      className={`relative z-10 mt-2 grid size-[15px] shrink-0 place-items-center rounded-full border md:absolute md:top-3 md:left-1/2 md:-translate-x-1/2 ${
-                        c.dark ? "border-gold/50 bg-night" : "border-gold/60 bg-ivory"
-                      }`}
-                    >
-                      <span className="size-[5px] rounded-full bg-gold" />
-                    </span>
+        {/* 4-up grid */}
+        <ol className="mt-12 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 md:mt-14 md:gap-x-5 lg:grid-cols-4">
+          {chapters.map((c, i) => (
+            <li key={c.n} className="group flex flex-col">
+              <figure className="relative aspect-[4/5] overflow-hidden border border-night-foreground/70">
+                <img
+                  src={c.img}
+                  alt={c.alt}
+                  width={640}
+                  height={800}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 size-full object-cover grayscale transition-[filter,transform] duration-500 ease-out group-hover:grayscale-0 group-hover:scale-[1.03]"
+                />
 
-                    <div className={`min-w-0 md:pr-8 ${flip ? "md:order-2 md:pr-0 md:pl-8" : ""}`}>
-                      <p
-                        className={`eyebrow ${c.dark ? "text-gold" : "text-gold-hover"} ${
-                          flip ? "" : "md:text-right"
-                        }`}
-                      >
-                        {c.mark}
-                      </p>
-                      <p
-                        className={`mt-4 font-display text-[1.5rem] leading-[1.15] font-light text-balance-tight sm:text-[2rem] ${
-                          c.dark ? "text-night-foreground" : "text-ink"
-                        } ${flip ? "" : "md:text-right"}`}
-                      >
-                        {c.title}
-                      </p>
-                      <p
-                        className={`mt-4 max-w-xs text-[0.9375rem] leading-[1.7] font-light ${
-                          c.dark ? "text-night-muted" : "text-ink-muted"
-                        } ${flip ? "" : "md:ml-auto md:text-right"}`}
-                      >
-                        {c.note}
-                      </p>
-                    </div>
+                {/* Chapter index chip, top-left */}
+                <span className="absolute top-0 left-0 bg-night-foreground px-2 py-1 font-display text-[0.65rem] font-semibold tracking-tight text-night uppercase">
+                  0{i + 1} / 04
+                </span>
 
-                    {c.img ? (
-                      <figure
-                        className={`col-start-2 mt-5 md:col-start-auto md:mt-0 md:pl-8 ${
-                          flip ? "md:order-1 md:flex md:justify-end md:pr-8 md:pl-0" : ""
-                        }`}
-                      >
-                        <img
-                          src={c.img}
-                          alt={c.alt}
-                          width={720}
-                          height={720}
-                          loading="lazy"
-                          decoding="async"
-                          className={`aspect-square w-32 object-cover transition-all duration-[900ms] ease-calm hover:scale-[1.03] hover:opacity-100 sm:w-40 md:w-44 ${
-                            c.dark ? "opacity-75" : "opacity-95"
-                          }`}
-                        />
-                      </figure>
-                    ) : (
-                      <div aria-hidden className={flip ? "md:order-1" : ""} />
-                    )}
-                  </div>
-                </Reveal>
-              );
-            })}
-          </ol>
+                {/* Giant numeral overlay, bottom-right */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -right-1 -bottom-3 font-display text-[5.5rem] leading-none font-bold tracking-[-0.06em] text-ivory mix-blend-difference transition-transform duration-500 ease-out sm:text-[6.5rem] md:-bottom-5 md:text-[7rem] group-hover:-translate-y-1"
+                >
+                  {c.n}
+                </span>
+              </figure>
+
+              <div className="mt-4">
+                <p className="font-display text-[0.65rem] font-medium tracking-[0.14em] text-gold uppercase">
+                  {c.mark}
+                </p>
+                <h3 className="mt-2 font-display text-lg leading-tight font-semibold text-night-foreground sm:text-xl">
+                  {c.title.replace(/\.$/, "")}
+                  <span className="text-gold">.</span>
+                </h3>
+                <p className="mt-2 font-display text-[0.82rem] leading-relaxed font-light text-night-foreground/60">
+                  {c.note}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        {/* Dark → morning rail at the bottom */}
+        <div
+          aria-hidden
+          className="mt-14 h-px w-full bg-gradient-to-r from-night-foreground/20 via-gold to-ivory"
+        />
+        <div className="mt-3 flex justify-between font-display text-[0.65rem] font-medium tracking-[0.14em] text-night-foreground/60 uppercase">
+          <span>night 01</span>
+          <span>night 21</span>
         </div>
       </div>
     </section>
