@@ -42,7 +42,7 @@ export function computeCohortForDate(today: Date = new Date()): ComputedCohort {
   return {
     name: `${monthLong} ${sD === 1 ? "1st" : "16th"} Cohort`,
     startsOn: `${monthLong} ${sD}`,
-    price: "₹199",
+    price: "₹1,499",
     slug: `${MONTH_SHORT[sM]}-${pad(sD)}-${sY}`,
     startDate,
     endDate,

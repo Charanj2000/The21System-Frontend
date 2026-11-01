@@ -18,7 +18,7 @@ const title = "The21System — The 21-Day Sleep Reset";
 
 function priceNumeric(): string {
   const match = COHORT.price.match(/(\d[\d,]*)/);
-  return match ? match[1].replace(/,/g, "") : "199";
+  return match ? match[1].replace(/,/g, "") : "1499";
 }
 
 export const Route = createFileRoute("/")({
