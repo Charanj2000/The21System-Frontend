@@ -91,12 +91,45 @@ function CheckoutPage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<Reservation>({
     resolver: zodResolver(reservationSchema),
     mode: "onBlur",
     defaultValues: { name: "", email: "", phone: "" },
   });
+
+  // Prefill the form from the authenticated user once per session.
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (!session || prefilledRef.current) return;
+    prefilledRef.current = true;
+
+    const user = session.user;
+    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const metaName =
+      (typeof metadata.full_name === "string" && metadata.full_name) ||
+      (typeof metadata.name === "string" && metadata.name) ||
+      (typeof metadata.fullName === "string" && metadata.fullName) ||
+      "";
+    const metaEmail = user.email ?? "";
+
+    reset({ name: metaName, email: metaEmail, phone: "" });
+
+    void supabase
+      .from("profiles")
+      .select("full_name, email, phone")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        reset({
+          name: data.full_name || metaName,
+          email: data.email || metaEmail,
+          phone: data.phone || "",
+        });
+      });
+  }, [session, reset]);
 
   const busy = state === "opening" || state === "processing";
   const lastReservationRef = useRef<Reservation | null>(null);
