@@ -5,68 +5,80 @@ import { Reveal } from "./Reveal";
 import { ReserveButton } from "./ReserveButton";
 
 const included = [
-  "21-day guided journey",
-  "WhatsApp accountability",
-  "Discord community",
-  "Weekly live sessions",
-  "Lifetime community access",
-  "One time payment",
+  "21-day guided journey, delivered one night at a time",
+  "Weekly live sessions with a sleep coach",
+  "Private cohort group — the people doing it with you",
+  "Lifetime access to the system and all revisions",
+  "Full refund if 21 nights change nothing",
 ];
 
 export function Pricing() {
   return (
-    <section
-      id="begin"
-      className="section-y-air relative overflow-hidden bg-night px-6 md:px-10"
-    >
-      <div aria-hidden className="halo -top-24 left-1/2 size-96 -translate-x-1/2 animate-breathe" />
-      <div className="relative mx-auto max-w-4xl">
-        <div className="text-center">
-          <Reveal>
-            <p className="eyebrow text-gold">Tonight can end differently</p>
-          </Reveal>
-          <Reveal delay={0.08}>
-            <h2 className="mt-6 font-display text-[2rem] leading-[1.08] font-extralight text-night-foreground text-balance-tight sm:text-5xl">
-              The 21-Day Sleep Reset
-            </h2>
-          </Reveal>
-          <Reveal delay={0.14}>
-            <p className="mt-6 font-display text-5xl font-light text-night-foreground sm:text-6xl">
-              {COHORT.price}
-            </p>
-          </Reveal>
-          <Reveal delay={0.18}>
-            <p className="mt-3 text-[0.75rem] tracking-[0.16em] text-night-muted uppercase">
-              One payment · No subscription
+    <section id="begin" className="section-y-air relative bg-ivory text-ink">
+      <div className="mx-auto max-w-[1100px] px-5 md:px-10">
+        <div className="grid gap-14 md:grid-cols-[1.1fr_1fr] md:items-start md:gap-20">
+          {/* Left: price + CTA */}
+          <div>
+            <Reveal>
+              <p className="eyebrow text-gold">Reserve</p>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <h2 className="editorial-lg mt-5 text-ink">
+                One payment.
+                <br />
+                <em className="italic text-gold">One cohort.</em>
+              </h2>
+            </Reveal>
+
+            <Reveal delay={0.14}>
+              <p className="mt-10 font-display text-[clamp(3.5rem,8vw,5.5rem)] leading-none font-light tracking-tight text-ink">
+                {COHORT.price}
+              </p>
+            </Reveal>
+
+            <Reveal delay={0.18}>
+              <p className="mt-3 font-sans text-[0.85rem] tracking-[0.14em] text-ink-muted uppercase">
+                Once · No subscription
+              </p>
+            </Reveal>
+
+            <Reveal delay={0.24}>
+              <div className="mt-10 flex flex-col gap-3">
+                <ReserveButton />
+                <p className="font-sans text-[0.85rem] text-ink-muted">
+                  Full refund if nothing changes by day 21 —
+                  <br className="hidden sm:block" /> no forms, no interviews.
+                </p>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Right: what's included */}
+          <Reveal delay={0.22}>
+            <ul className="flex flex-col">
+              {included.map((item, i) => (
+                <li
+                  key={item}
+                  className={`flex items-start gap-4 py-5 ${i > 0 ? "hairline" : ""}`}
+                >
+                  <Check
+                    aria-hidden
+                    className="mt-1 size-4 shrink-0 text-gold"
+                    strokeWidth={1.5}
+                  />
+                  <span className="font-sans text-[0.95rem] leading-relaxed text-ink">
+                    {item}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-8 font-sans text-[0.85rem] leading-relaxed text-ink-muted">
+              Next cohort begins{" "}
+              <span className="text-ink">{COHORT.startsOn}</span>. Limited to 100
+              members per cohort — everyone starts together.
             </p>
           </Reveal>
         </div>
-
-        <Reveal delay={0.22}>
-          <ul className="mx-auto mt-10 grid max-w-2xl gap-px sm:grid-cols-2">
-            {included.map((item) => (
-              <li
-                key={item}
-                className="flex items-center gap-3 border-b border-night-hairline py-4"
-              >
-                <Check aria-hidden className="size-4 shrink-0 text-gold" strokeWidth={1.25} />
-                <span className="text-[0.92rem] font-light text-night-muted">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </Reveal>
-
-        <Reveal delay={0.28}>
-          <div className="mt-10 text-center">
-            <ReserveButton />
-            <p className="mt-6 text-[0.75rem] tracking-[0.2em] text-gold uppercase">
-              Next cohort begins {COHORT.startsOn}
-            </p>
-            <p className="mx-auto mt-3 max-w-xs text-[0.85rem] leading-relaxed font-light text-night-muted">
-              You&rsquo;re reserving a place, not starting tonight. Everyone begins together.
-            </p>
-          </div>
-        </Reveal>
       </div>
     </section>
   );

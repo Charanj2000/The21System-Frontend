@@ -6,37 +6,43 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * THE21SYSTEM — Kinetic Brutalist edition (AW26)
+ * THE21SYSTEM — Midnight into Linen edition (AW26)
  *
- * Palette: near-black (#0A0A0A), crisp white (#FAFAFA), electric lavender (#B19CD9).
- * Type: Space Grotesk (display + body) with Instrument Serif for editorial breaks.
- * Motion: Lenis smooth scroll, scroll-triggered reveals, marquees, draggable blocks.
+ * A premium wellness landing in the vein of Aesop / Oura / Function Health.
+ *   NIGHT  (hero + "science of sleep" sections):   #141210 ground, #E8E2D5 type,
+ *          #C9A961 warm-gold accent.
+ *   LINEN  (story, pricing, testimonial sections): #F5F0E8 cream, #2A2520 ink,
+ *          #B8864A ochre accent.
+ * Type: Fraunces (variable serif, display) + Inter (humanist grotesk, body).
+ * Motion: slow, confident fades. No marquees, no draggables, no grain.
  */
 
 @theme {
-  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-hand: "Caveat", ui-serif, cursive;
 
-  /* NIGHT: true black + hairline whites */
-  --color-night: oklch(0.08 0 0);
-  --color-night-surface: oklch(0.14 0 0);
-  --color-night-foreground: oklch(0.985 0 0);
-  --color-night-muted: oklch(0.72 0 0);
-  --color-night-hairline: oklch(1 0 0 / 8%);
+  /* NIGHT (midnight) */
+  --color-night: oklch(0.11 0.005 70);          /* #141210 */
+  --color-night-surface: oklch(0.16 0.006 70);
+  --color-night-foreground: oklch(0.9 0.013 85); /* #E8E2D5 warm linen on dark */
+  --color-night-muted: oklch(0.68 0.012 85);
+  --color-night-hairline: oklch(0.9 0.013 85 / 14%);
 
-  /* MORNING */
-  --color-ivory: oklch(0.985 0 0);
-  --color-ink: oklch(0.08 0 0);
-  --color-ink-muted: oklch(0.5 0 0);
+  /* LINEN (cream editorial) */
+  --color-ivory: oklch(0.95 0.014 85);           /* #F5F0E8 cream */
+  --color-ivory-surface: oklch(0.92 0.014 85);
+  --color-ink: oklch(0.195 0.013 65);            /* #2A2520 warm ink */
+  --color-ink-muted: oklch(0.48 0.01 65);
+  --color-ink-hairline: oklch(0.195 0.013 65 / 14%);
 
-  /* ACCENT: electric lavender replaces gold.
-     Token name kept as --color-gold so component classes don't need a rename;
-     visually it's now a soft violet. */
-  --color-gold: oklch(0.78 0.14 300);
-  --color-gold-hover: oklch(0.72 0.17 300);
-  --color-success: oklch(0.78 0.14 300);
+  /* ACCENT: warm ochre on cream, warmer gold on midnight. Token name kept as
+     --color-gold so existing component classes don't need a rename. */
+  --color-gold: oklch(0.68 0.095 68);            /* #B8864A ochre */
+  --color-gold-hover: oklch(0.62 0.1 68);
+  --color-gold-dark: oklch(0.73 0.085 72);       /* #C9A961 on midnight */
+  --color-success: oklch(0.6 0.08 150);
 
   --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -167,107 +173,86 @@
   text-transform: uppercase;
 }
 
-/* Brutalist display sizes — fluid with clamp() so they scale on mobile. */
-@utility display-xl {
+/* Editorial serif display sizes — fluid with clamp() so they scale on mobile.
+   Fraunces is a variable serif; opsz follows size, weight stays airy. */
+@utility editorial-xl {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(3.25rem, 14vw, 11rem);
-  line-height: 0.92;
-  letter-spacing: -0.045em;
+  font-weight: 400;
+  font-size: clamp(2rem, 7.5vw, 5.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  font-variation-settings: "opsz" 144;
 }
 
-@utility display-lg {
+@utility editorial-lg {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(2.5rem, 9vw, 6.5rem);
-  line-height: 0.95;
-  letter-spacing: -0.04em;
-}
-
-@utility display-md {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(1.75rem, 5vw, 3rem);
+  font-weight: 400;
+  font-size: clamp(2rem, 5.5vw, 3.75rem);
   line-height: 1.05;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+  font-variation-settings: "opsz" 96;
 }
 
-/* Edge-to-edge brutalist border row (used above/below Hero and Nav) */
-@utility hard-rule {
-  border-top: 1px solid var(--color-night-foreground);
+@utility editorial-md {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 3.2vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  font-variation-settings: "opsz" 48;
 }
 
-/* Marquee strip — pure CSS infinite scroll, uses two tracks for seamless loop. */
-@utility marquee-wrap {
-  display: flex;
-  overflow: hidden;
-  user-select: none;
-  gap: 2.5rem;
-  mask-image: linear-gradient(90deg, transparent 0, black 6%, black 94%, transparent 100%);
+/* Hairline rule used between sections / cards */
+@utility hairline {
+  border-top: 1px solid var(--color-ink-hairline);
+}
+@utility hairline-light {
+  border-top: 1px solid var(--color-night-hairline);
 }
 
-@utility marquee-track {
-  display: flex;
-  flex-shrink: 0;
-  gap: 2.5rem;
-  min-width: 100%;
-  animation: marquee var(--marquee-duration, 36s) linear infinite;
-}
-
-@utility marquee-reverse {
-  animation-direction: reverse;
-}
-
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(calc(-100% - 2.5rem)); }
-}
-
-/* Blocky brutalist button */
-@utility btn-brut {
+/* Primary pill CTA (named across wellness benchmarks: Oura, Function, Form, Headspace) */
+@utility btn-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.95rem 1.4rem;
-  background: var(--color-night-foreground);
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.25rem;
+  padding: 0 1.75rem;
+  border-radius: 9999px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: -0.005em;
+  transition: background-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@utility btn-pill-dark {
+  background-color: var(--color-ink);
+  color: var(--color-ivory);
+  &:hover {
+    background-color: var(--color-gold);
+    color: var(--color-ivory);
+    transform: translateY(-1px);
+  }
+}
+@utility btn-pill-light {
+  background-color: var(--color-night-foreground);
   color: var(--color-night);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 0.8rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  transition: all 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  border: 1px solid var(--color-night-foreground);
+  &:hover {
+    background-color: var(--color-gold-dark);
+    color: var(--color-night);
+    transform: translateY(-1px);
+  }
 }
-
-@utility btn-brut-accent {
-  background: var(--color-gold);
+@utility btn-pill-accent {
+  background-color: var(--color-gold-dark);
   color: var(--color-night);
-  border-color: var(--color-gold);
-}
-
-@utility btn-brut-outline {
-  background: transparent;
-  color: var(--color-night-foreground);
-  border: 1px solid var(--color-night-foreground);
-}
-
-/* Grid overlay used behind brutalist sections */
-@utility grid-lines {
-  background-image:
-    linear-gradient(to right, var(--color-night-hairline) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-night-hairline) 1px, transparent 1px);
-  background-size: clamp(60px, 8vw, 120px) clamp(60px, 8vw, 120px);
-}
-
-/* Fine film grain overlay */
-@utility grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  mix-blend-mode: overlay;
-  opacity: 0.08;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  &:hover {
+    background-color: var(--color-night-foreground);
+    color: var(--color-night);
+    transform: translateY(-1px);
+  }
 }
 
 /* Soft gold halo used behind night sections */
@@ -432,7 +417,7 @@
 
   html {
     scroll-behavior: smooth;
-    background-color: var(--color-night);
+    background-color: var(--color-ivory);
   }
 
   /* Fixed nav is ~4.5rem tall — anchored sections must clear it. */
@@ -446,9 +431,11 @@
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--color-ivory);
+    color: var(--color-ink);
     font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -473,7 +460,8 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.03em;
+    font-weight: 400;
+    letter-spacing: -0.02em;
   }
 
   ::selection {

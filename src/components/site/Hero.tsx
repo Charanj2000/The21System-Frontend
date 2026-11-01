@@ -1,123 +1,146 @@
 import { motion, useReducedMotion } from "motion/react";
-import { useRef } from "react";
 
+import heroBedroom from "@/assets/hero-bedroom.jpg";
+import community1 from "@/assets/community-1.jpg";
+import community2 from "@/assets/community-2.jpg";
+import community3 from "@/assets/community-3.jpg";
 import { COHORT } from "@/lib/cohort";
 import { ReserveButton } from "./ReserveButton";
-import { Marquee } from "./Marquee";
 
-const marqueeTop = [
-  "the 21-day sleep reset",
-  "cohort begins " + COHORT.startsOn.toLowerCase(),
-  "AW26",
-  "limited to 100",
-  "guided together",
-];
+const avatars = [community1, community2, community3];
 
 export function Hero() {
   const reduced = useReducedMotion();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <section className="relative isolate overflow-hidden bg-night pt-32 pb-10 sm:pt-36 md:pb-16">
-      <span aria-hidden className="grain" />
-      <div
+    <section className="relative isolate overflow-hidden bg-night text-night-foreground">
+      {/* Full-bleed hero photo — right-weighted on desktop, full-width on mobile. */}
+      <motion.div
+        initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
+        className="pointer-events-none absolute inset-y-0 right-0 -z-0 w-full md:w-[72%] lg:w-[68%]"
         aria-hidden
-        className="grid-lines absolute inset-0 opacity-30"
-      />
-
-      <div
-        ref={containerRef}
-        className="relative mx-auto flex max-w-[1400px] flex-col gap-8 px-5 md:px-10"
       >
-        {/* Top meta row */}
-        <div className="flex flex-wrap items-end justify-between gap-y-4 border-b border-night-foreground pb-6">
-          <span className="font-display text-xs font-medium tracking-tight text-night-foreground/70 uppercase">
-            Vol. 01 — The Sleep Edition
-          </span>
-          <span className="font-display text-xs font-medium tracking-tight text-night-foreground/70 uppercase">
-            {COHORT.startsOn} → ends +15
-          </span>
-        </div>
+        <img
+          src={heroBedroom}
+          alt=""
+          width={2000}
+          height={2500}
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 size-full object-cover object-center"
+        />
+        {/* MOBILE: heavier full scrim so overlaid text stays legible */}
+        <div className="absolute inset-0 bg-night/55 md:hidden" />
+        {/* DESKTOP: fade left so photo blends under the text column */}
+        <div className="absolute inset-y-0 left-0 hidden w-1/2 bg-gradient-to-r from-night via-night/80 to-transparent md:block" />
+        {/* Right edge fade on wide screens */}
+        <div className="absolute inset-y-0 right-0 hidden w-24 bg-gradient-to-l from-night/40 to-transparent md:block" />
+        {/* Top melts into nav */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-night to-transparent" />
+        {/* Bottom melts into next section */}
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-night via-night/85 to-transparent" />
+      </motion.div>
 
-        {/* The money shot */}
-        <div className="pt-6 md:pt-12">
-          <motion.h1
-            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24 }}
+      {/* Content column — left-weighted, sits over the photo */}
+      <div className="relative z-10 mx-auto grid min-h-[88vh] max-w-[1360px] grid-cols-1 gap-10 px-5 pt-32 pb-20 md:min-h-[92vh] md:grid-cols-12 md:gap-12 md:px-10 md:pt-40 md:pb-28">
+        <div className="flex flex-col justify-center md:col-span-7 lg:col-span-6">
+          <motion.p
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="display-xl text-night-foreground"
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="eyebrow text-gold-dark"
           >
-            <span className="block">reclaim</span>
-            <span className="block pl-[0.08em] text-night-foreground/40">the hours</span>
-            <span className="block">
-              before{" "}
-              <span className="relative italic font-serif font-normal text-gold">
-                midnight
-                <svg
-                  aria-hidden
-                  viewBox="0 0 300 20"
-                  className="absolute -bottom-2 left-0 w-full"
-                >
-                  <path
-                    d="M2 10 Q 75 2 150 10 T 298 10"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              .
-            </span>
+            The 21-Day Sleep Reset
+          </motion.p>
+
+          <motion.h1
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.1, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="editorial-xl mt-6 max-w-xl text-night-foreground"
+          >
+            <span className="block">Reclaim the hours</span>
+            <em className="block italic font-normal text-gold-dark">
+              before midnight.
+            </em>
           </motion.h1>
-        </div>
 
-        {/* Bottom row — CTA + draggable chip + description */}
-        <div className="mt-6 grid gap-10 border-t border-night-foreground pt-8 md:mt-10 md:grid-cols-[1.3fr_1fr] md:gap-16 md:pt-10">
-          <div className="flex flex-col gap-6">
-            <p className="font-display text-base leading-snug font-light text-night-foreground/80 sm:text-lg md:max-w-md">
-              A 21-night cohort reset for people who think for a living.
-              Calmer evenings, clearer mornings — on a schedule.
-            </p>
-            <div className="flex flex-wrap items-center gap-4">
-              <ReserveButton />
-              <span className="font-display text-xs font-medium tracking-tight text-night-foreground/60 uppercase">
-                → or scroll to read first
-              </span>
+          <motion.p
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.1, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-7 max-w-md font-sans text-base leading-relaxed text-night-foreground/90 sm:text-[1.0625rem]"
+          >
+            A 21-night cohort reset for people who think for a living.
+            Quieter evenings. Clearer mornings. Guided, together — never alone.
+          </motion.p>
+
+          <motion.div
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center"
+          >
+            <ReserveButton variant="pill-on-dark" />
+            <span className="font-sans text-sm text-night-foreground/75">
+              Full refund if 21 nights change nothing.
+            </span>
+          </motion.div>
+
+          <motion.div
+            initial={reduced ? { opacity: 0 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.1, delay: 0.6 }}
+            className="mt-10 flex items-center gap-4"
+          >
+            <div className="flex -space-x-2.5">
+              {avatars.map((src, i) => (
+                <span
+                  key={i}
+                  className="relative inline-block size-9 overflow-hidden rounded-full ring-2 ring-night"
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    aria-hidden
+                    width={72}
+                    height={72}
+                    loading="eager"
+                    className="size-full object-cover"
+                  />
+                </span>
+              ))}
             </div>
-          </div>
+            <p className="font-sans text-sm leading-snug text-night-foreground/80">
+              <span className="text-night-foreground">150+ professionals</span>{" "}
+              have reset their sleep with us
+            </p>
+          </motion.div>
 
-          {/* Draggable spec sheet */}
-          <div className="relative hidden h-[180px] md:block">
-            <motion.div
-              drag
-              dragConstraints={containerRef}
-              dragElastic={0.18}
-              whileDrag={{ scale: 0.98, cursor: "grabbing" }}
-              className="absolute right-0 top-0 w-[260px] cursor-grab border border-night-foreground bg-night-foreground p-5 text-night select-none"
-            >
-              <div className="flex items-center justify-between font-display text-xs font-semibold tracking-tight uppercase">
-                <span>spec sheet</span>
-                <span aria-hidden>⇢ drag me</span>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-y-3 font-display text-[0.78rem] font-medium tracking-tight uppercase">
-                <span className="text-night/60">length</span>
-                <span>21 nights</span>
-                <span className="text-night/60">price</span>
-                <span>{COHORT.price} once</span>
-                <span className="text-night/60">cohort</span>
-                <span>limited 100</span>
-                <span className="text-night/60">refund</span>
-                <span>no questions</span>
-              </div>
-            </motion.div>
-          </div>
+          <motion.div
+            initial={reduced ? { opacity: 0 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.1, delay: 0.8 }}
+            className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-1.5 border-t border-night-foreground/15 pt-6 font-sans text-sm text-night-foreground/80"
+          >
+            <span>
+              <span className="text-night-foreground/60">Next cohort </span>
+              <span className="text-night-foreground">{COHORT.startsOn}</span>
+            </span>
+            <span aria-hidden className="hidden size-1 rounded-full bg-night-foreground/40 sm:block" />
+            <span>
+              <span className="text-night-foreground/60">Place </span>
+              <span className="text-night-foreground">{COHORT.price}, once</span>
+            </span>
+            <span aria-hidden className="hidden size-1 rounded-full bg-night-foreground/40 sm:block" />
+            <span>
+              <span className="text-night-foreground/60">Capacity </span>
+              <span className="text-night-foreground">100 members</span>
+            </span>
+          </motion.div>
         </div>
-      </div>
-
-      {/* Bottom marquee strip */}
-      <div className="mt-12 border-y border-night-foreground py-3 text-sm text-night-foreground md:mt-20 md:py-4 md:text-base">
-        <Marquee items={marqueeTop} duration={44} />
       </div>
     </section>
   );

@@ -1,17 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import heroNight from "@/assets/hero-night.jpg";
-import { Community } from "@/components/site/Community";
+import heroBedroom from "@/assets/hero-bedroom.jpg";
 import { Faq } from "@/components/site/Faq";
 import { Footer } from "@/components/site/Footer";
 import { Founder } from "@/components/site/Founder";
 import { Hero } from "@/components/site/Hero";
 import { Journey } from "@/components/site/Journey";
+import { Mechanism } from "@/components/site/Mechanism";
 import { Nav } from "@/components/site/Nav";
-import { NightTimeline } from "@/components/site/NightTimeline";
 import { Pricing } from "@/components/site/Pricing";
 import { SkipLink } from "@/components/site/SkipLink";
-import { TheSystem } from "@/components/site/TheSystem";
+import { Testimonial } from "@/components/site/Testimonial";
 import { COHORT, computeCohortForDate } from "@/lib/cohort";
 import { getHomeFaqs } from "@/lib/faqs";
 
@@ -74,7 +73,7 @@ export const Route = createFileRoute("/")({
       ],
       links: [
         { rel: "canonical", href: "/" },
-        { rel: "preload", as: "image", href: heroNight, fetchPriority: "high" },
+        { rel: "preload", as: "image", href: heroBedroom, fetchPriority: "high" },
       ],
       scripts: [
         { type: "application/ld+json", children: JSON.stringify(structuredData) },
@@ -91,10 +90,9 @@ function Index() {
       <Nav />
       <main id="content">
         <Hero />
-        <NightTimeline />
-        <TheSystem />
+        <Mechanism />
         <Journey />
-        <Community />
+        <Testimonial />
         <Founder />
         <Pricing />
         <Faq />
