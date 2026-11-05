@@ -20,7 +20,11 @@ import {
 import { Reveal } from "@/components/site/Reveal";
 import { COHORT } from "@/lib/cohort";
 import { supabase } from "@/lib/supabase";
-import { createSleepResetOrder, verifySleepResetPayment } from "@/lib/payments";
+import {
+  createSleepResetOrder,
+  verifySleepResetPayment,
+  type CreatedPaymentOrder,
+} from "@/lib/payments";
 import { loadRazorpayCheckout } from "@/lib/razorpay";
 
 const title = "Checkout — The 21-Day Sleep Reset";
@@ -43,7 +47,8 @@ export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
 });
 
-type PayState = "idle" | "opening" | "processing" | "success" | "failed" | "cancelled";
+type PayState =
+  "idle" | "opening" | "processing" | "success" | "failed" | "cancelled";
 
 const included = [
   "21-day guided journey",
@@ -75,6 +80,11 @@ type Reservation = z.infer<typeof reservationSchema>;
 
 function CheckoutPage() {
   const [state, setState] = useState<PayState>("idle");
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [preparedOrder, setPreparedOrder] =
+    useState<CreatedPaymentOrder | null>(null);
   const { session, loading: sessionLoading } = useSession();
   const navigate = useNavigate();
 
@@ -92,6 +102,8 @@ function CheckoutPage() {
     register,
     handleSubmit,
     reset,
+    getValues,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<Reservation>({
     resolver: zodResolver(reservationSchema),
@@ -134,36 +146,88 @@ function CheckoutPage() {
   const busy = state === "opening" || state === "processing";
   const lastReservationRef = useRef<Reservation | null>(null);
 
+  const saveReservationProfile = async (reservation: Reservation) => {
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!sessionData.session) {
+      throw new Error("Please sign in with Google before checking out.");
+    }
+
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: sessionData.session.user.id,
+      full_name: reservation.name,
+      email: reservation.email,
+      phone: reservation.phone,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (profileError) {
+      console.error("Profile upsert failed:", profileError);
+      throw new Error("Could not save your contact details. Please try again.");
+    }
+  };
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+
+    if (!code) {
+      setCouponError("Enter a coupon code first.");
+      return;
+    }
+
+    const isReservationValid = await trigger();
+    if (!isReservationValid) return;
+
+    const reservation = getValues();
+    setCouponBusy(true);
+    setCouponError("");
+
+    try {
+      await saveReservationProfile(reservation);
+
+      const order = await createSleepResetOrder({ couponCode: code });
+
+      if (order.coupon_applied !== true) {
+        throw new Error("This coupon could not be applied. Please try again.");
+      }
+
+      setPreparedOrder(order);
+      setCouponInput(code);
+    } catch (error) {
+      console.error("Coupon application failed:", error);
+      setPreparedOrder(null);
+      setCouponError(
+        error instanceof Error
+          ? error.message
+          : "Unable to apply this coupon. Please try again.",
+      );
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponInput("");
+    setCouponError("");
+    setPreparedOrder(null);
+  };
+
   const startPayment = async (reservation: Reservation) => {
     lastReservationRef.current = reservation;
     setState("opening");
 
     try {
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-
-      if (!sessionData.session) {
-        throw new Error("Please sign in with Google before checking out.");
-      }
-
       setState("processing");
 
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: sessionData.session.user.id,
-        full_name: reservation.name,
-        email: reservation.email,
-        phone: reservation.phone,
-        updated_at: new Date().toISOString(),
-      });
+      await saveReservationProfile(reservation);
 
-      if (profileError) {
-        console.error("Profile upsert failed:", profileError);
-        throw new Error("Could not save your contact details. Please try again.");
-      }
-
-      const order = await createSleepResetOrder();
+      const order =
+        preparedOrder?.coupon_applied === true
+          ? preparedOrder
+          : await createSleepResetOrder();
 
       await loadRazorpayCheckout();
 
@@ -211,6 +275,15 @@ function CheckoutPage() {
     }
   };
 
+  const handleCheckout = async (reservation: Reservation) => {
+    if (couponInput.trim() && !preparedOrder?.coupon_applied) {
+      setCouponError("Apply your coupon before continuing to payment.");
+      return;
+    }
+
+    await startPayment(reservation);
+  };
+
   if (sessionLoading || !session) {
     return (
       <main
@@ -218,7 +291,9 @@ function CheckoutPage() {
         className="relative flex min-h-dvh items-center justify-center bg-night px-6 py-16 md:px-10 md:py-24"
       >
         <p className="text-[0.8rem] tracking-[0.14em] text-night-muted uppercase">
-          {sessionLoading ? "Checking your session…" : "Redirecting to sign in…"}
+          {sessionLoading
+            ? "Checking your session…"
+            : "Redirecting to sign in…"}
         </p>
       </main>
     );
@@ -271,111 +346,186 @@ function CheckoutPage() {
                   >
                     <Check
                       className="size-4 shrink-0 text-gold"
-                      strokeWidth={1.25}
+                      strokeWidth={1.5}
                       aria-hidden
                     />
-                    <span className="text-[0.95rem] font-light text-night-muted">
+                    <span className="text-[0.9rem] font-light text-night-muted">
                       {item}
                     </span>
                   </li>
                 ))}
               </ul>
             </Reveal>
-
-            <Reveal delay={0.3}>
-              <p className="mt-8 flex items-start gap-3 text-[0.78rem] leading-relaxed font-light text-night-muted">
-                <Users
-                  className="mt-0.5 size-4 shrink-0 text-gold"
-                  strokeWidth={1.25}
-                  aria-hidden
-                />
-                You&rsquo;re reserving a place. The cohort starts together on{" "}
-                {COHORT.startsOn}.
-              </p>
-            </Reveal>
           </div>
 
-          <Reveal delay={0.2}>
-            <aside className="border border-night-hairline bg-night-surface p-7 md:p-8">
-              <div className="flex items-baseline justify-between">
-                <span className="text-[0.8rem] tracking-[0.14em] text-night-muted uppercase">
-                  One time
-                </span>
-                <span className="font-display text-4xl font-light text-night-foreground">
-                  {COHORT.price}
-                </span>
-              </div>
-
-              <div className="mt-6 space-y-2 border-t border-night-hairline pt-6 text-[0.85rem] font-light text-night-muted">
-                <div className="flex justify-between">
-                  <span>Programme</span>
-                  <span>{COHORT.price}</span>
+          <div>
+            <Reveal delay={0.15}>
+              <div className="border border-night-hairline bg-night-surface p-6 sm:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[0.75rem] tracking-[0.16em] text-night-muted uppercase">
+                      Your investment
+                    </p>
+                    <p className="mt-3 font-display text-3xl font-light text-night-foreground">
+                      {preparedOrder?.coupon_applied
+                        ? formatINR(preparedOrder.final_amount)
+                        : COHORT.price}
+                    </p>
+                    {preparedOrder?.coupon_applied ? (
+                      <p className="mt-2 text-[0.8rem] text-night-muted line-through">
+                        {formatINR(preparedOrder.original_amount)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Lock
+                    className="size-5 text-gold"
+                    strokeWidth={1.25}
+                    aria-hidden
+                  />
                 </div>
-                <div className="flex justify-between">
-                  <span>Taxes</span>
-                  <span>Included</span>
-                </div>
-              </div>
 
-              <form
-                noValidate
-                onSubmit={handleSubmit(startPayment)}
-                className="mt-7 space-y-5 border-t border-night-hairline pt-7"
-              >
-                <Field
-                  id="name"
-                  label="Full name"
-                  autoComplete="name"
-                  error={errors.name?.message}
-                  {...register("name")}
-                />
+                {preparedOrder?.coupon_applied ? (
+                  <div className="mt-5 space-y-2 border-y border-night-hairline py-4 text-[0.85rem]">
+                    <div className="flex justify-between gap-4 text-night-muted">
+                      <span>Original price</span>
+                      <span>{formatINR(preparedOrder.original_amount)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-gold">
+                      <span>Coupon discount</span>
+                      <span>−{formatINR(preparedOrder.discount_amount)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4 pt-1 font-medium text-night-foreground">
+                      <span>Payable today</span>
+                      <span>{formatINR(preparedOrder.final_amount)}</span>
+                    </div>
+                  </div>
+                ) : null}
 
-                <Field
-                  id="email"
-                  label="Email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  error={errors.email?.message}
-                  {...register("email")}
-                />
-
-                <Field
-                  id="phone"
-                  label="Mobile number"
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  placeholder="10-digit mobile number"
-                  maxLength={10}
-                  error={errors.phone?.message}
-                  {...register("phone")}
-                />
-
-                <button
-                  type="submit"
-                  disabled={busy || isSubmitting}
-                  className="flex min-h-13 w-full items-center justify-center gap-3 bg-gold px-8 text-[0.8rem] tracking-[0.14em] text-night uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:bg-gold-hover disabled:cursor-wait disabled:opacity-70"
+                <form
+                  noValidate
+                  onSubmit={handleSubmit(handleCheckout)}
+                  className="mt-7 space-y-5 border-t border-night-hairline pt-7"
                 >
-                  {busy ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Lock className="size-3.5" strokeWidth={1.5} aria-hidden />
-                  )}
-                  Reserve with Razorpay
-                </button>
-              </form>
+                  <Field
+                    id="name"
+                    label="Full name"
+                    placeholder="Your name"
+                    autoComplete="name"
+                    error={errors.name?.message}
+                    {...register("name")}
+                  />
 
-              <p className="mt-5 text-center text-[0.72rem] font-light text-night-muted">
-                UPI · Cards · Netbanking · Wallets
-              </p>
+                  <Field
+                    id="email"
+                    label="Email address"
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    error={errors.email?.message}
+                    {...register("email")}
+                  />
 
-              <p className="mt-3 text-center text-[0.72rem] leading-relaxed font-light text-night-muted">
-                We only email you about your cohort. Cancel any time before{" "}
-                {COHORT.startsOn} for a full refund.
-              </p>
-            </aside>
-          </Reveal>
+                  <Field
+                    id="phone"
+                    label="Mobile number"
+                    type="tel"
+                    placeholder="10-digit mobile number"
+                    autoComplete="tel-national"
+                    inputMode="numeric"
+                    maxLength={10}
+                    error={errors.phone?.message}
+                    {...register("phone")}
+                  />
+
+                  <div className="border-t border-night-hairline pt-5">
+                    <label
+                      htmlFor="coupon"
+                      className="text-[0.75rem] tracking-[0.14em] text-night-muted uppercase"
+                    >
+                      Have a coupon code?
+                    </label>
+
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        id="coupon"
+                        type="text"
+                        value={couponInput}
+                        onChange={(event) => {
+                          setCouponInput(event.target.value);
+                          setPreparedOrder(null);
+                          setCouponError("");
+                        }}
+                        placeholder="Enter coupon code"
+                        autoComplete="off"
+                        disabled={couponBusy || busy}
+                        className="min-h-12 min-w-0 flex-1 border border-night-hairline bg-night px-4 text-[0.9rem] text-night-foreground outline-none transition-colors placeholder:text-night-muted/70 focus-visible:border-gold disabled:opacity-60"
+                      />
+
+                      {preparedOrder?.coupon_applied ? (
+                        <button
+                          type="button"
+                          onClick={removeCoupon}
+                          disabled={busy}
+                          className="min-h-12 border border-night-hairline px-4 text-[0.75rem] tracking-[0.1em] text-night-muted uppercase transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void applyCoupon()}
+                          disabled={couponBusy || busy}
+                          className="min-h-12 min-w-20 border border-gold px-4 text-[0.75rem] tracking-[0.1em] text-gold uppercase transition-colors hover:bg-gold hover:text-night disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {couponBusy ? (
+                            <Loader2 className="mx-auto size-4 animate-spin" />
+                          ) : (
+                            "Apply"
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    {preparedOrder?.coupon_applied ? (
+                      <p className="mt-3 flex items-center gap-2 text-[0.8rem] text-gold">
+                        <Check className="size-4" aria-hidden />
+                        Coupon {couponInput} applied successfully.
+                      </p>
+                    ) : null}
+
+                    {couponError ? (
+                      <p
+                        role="alert"
+                        className="mt-3 text-[0.8rem] text-destructive"
+                      >
+                        {couponError}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={busy || couponBusy || isSubmitting}
+                    className="inline-flex min-h-14 w-full items-center justify-center gap-3 bg-gold px-8 text-[0.8rem] tracking-[0.14em] text-night uppercase transition-all duration-500 ease-calm hover:-translate-y-0.5 hover:bg-gold-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {busy || isSubmitting ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Preparing secure checkout
+                      </>
+                    ) : (
+                      "Reserve with Razorpay"
+                    )}
+                  </button>
+
+                  <p className="text-center text-[0.75rem] leading-relaxed text-night-muted">
+                    Secure payment powered by Razorpay. Your place is confirmed
+                    after successful payment.
+                  </p>
+                </form>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </div>
 
@@ -385,31 +535,52 @@ function CheckoutPage() {
         onRetry={() => {
           const last = lastReservationRef.current;
           if (last) void startPayment(last);
-          else setState("idle");
         }}
       />
     </main>
   );
 }
 
-type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
+function formatINR(paise: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(paise / 100);
+}
+
+type FieldProps = {
   id: string;
   label: string;
   error?: string;
+  type?: string;
+  placeholder?: string;
+  autoComplete?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
 };
 
-function Field({ id, label, error, ...props }: FieldProps) {
+const Field = ({
+  id,
+  label,
+  error,
+  type = "text",
+  ...props
+}: FieldProps &
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, "id" | "type">) => {
   return (
     <div>
       <label
         htmlFor={id}
-        className="block text-[0.7rem] tracking-[0.16em] text-night-muted uppercase"
+        className="text-[0.75rem] tracking-[0.14em] text-night-muted uppercase"
       >
         {label}
       </label>
 
       <input
         id={id}
+        type={type}
         name={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
@@ -429,7 +600,7 @@ function Field({ id, label, error, ...props }: FieldProps) {
       ) : null}
     </div>
   );
-}
+};
 
 function PaymentOverlay({
   state,
@@ -607,7 +778,8 @@ function PaymentOverlay({
                     Payment cancelled.
                   </h2>
                   <p className="mt-4 text-[0.85rem] leading-relaxed font-light text-night-muted">
-                    No charge was made. You can reserve your spot whenever you&rsquo;re ready.
+                    No charge was made. You can reserve your spot whenever
+                    you&rsquo;re ready.
                   </p>
 
                   <button
@@ -641,7 +813,8 @@ function PaymentOverlay({
                     That payment didn&rsquo;t go through.
                   </h2>
                   <p className="mt-4 text-[0.85rem] leading-relaxed font-light text-night-muted">
-                    If you were charged, email billing@the21system.com before retrying. Otherwise you can try again now.
+                    If you were charged, email billing@the21system.com before
+                    retrying. Otherwise you can try again now.
                   </p>
 
                   <button

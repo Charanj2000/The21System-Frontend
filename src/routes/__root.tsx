@@ -17,7 +17,9 @@ function NotFoundComponent() {
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          Page not found
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           The page you're looking for doesn't exist or has been moved.
         </p>
@@ -77,49 +79,62 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "The21System — The 21-Day Sleep Reset" },
-      {
-        name: "description",
-        content:
-          "A 21-night reset for overthinkers. Quieter nights, clearer mornings, a calmer life.",
-      },
-      { name: "author", content: "The21System" },
-      { name: "theme-color", content: "#050505" },
-      { property: "og:site_name", content: "The21System" },
-      { property: "og:locale", content: "en_IN" },
-      { property: "og:title", content: "The21System — The 21-Day Sleep Reset" },
-      {
-        property: "og:description",
-        content:
-          "A 21-night reset for overthinkers. Quieter nights, clearer mornings, a calmer life.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Inter:wght@300..600&family=Caveat:wght@400..600&display=swap",
-      },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-    ],
-  }),
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+  {
+    head: () => ({
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: "The21System — The 21-Day Sleep Reset" },
+        {
+          name: "description",
+          content:
+            "A 21-night reset for overthinkers. Quieter nights, clearer mornings, a calmer life.",
+        },
+        { name: "author", content: "The21System" },
+        { name: "theme-color", content: "#050505" },
+        { property: "og:site_name", content: "The21System" },
+        { property: "og:locale", content: "en_IN" },
+        {
+          property: "og:title",
+          content: "The21System — The 21-Day Sleep Reset",
+        },
+        {
+          property: "og:description",
+          content:
+            "A 21-night reset for overthinkers. Quieter nights, clearer mornings, a calmer life.",
+        },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      links: [
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        {
+          rel: "preconnect",
+          href: "https://fonts.gstatic.com",
+          crossOrigin: "anonymous",
+        },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Inter:wght@300..600&family=Caveat:wght@400..600&display=swap",
+        },
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        {
+          rel: "icon",
+          href: "/the21system-icon.ico?v=2",
+          type: "image/x-icon",
+        },
+      ],
+    }),
+    shellComponent: RootShell,
+    component: RootComponent,
+    notFoundComponent: NotFoundComponent,
+    errorComponent: ErrorComponent,
+  },
+);
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
@@ -152,12 +167,19 @@ function SmoothScrollProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     // Respect reduced motion + touch devices — skip the lib entirely.
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const fine = window.matchMedia(
+      "(hover: hover) and (pointer: fine)",
+    ).matches;
     if (reduced || !fine) return;
 
     let rafId = 0;
-    let lenisInstance: { raf: (t: number) => void; destroy: () => void } | null = null;
+    let lenisInstance: {
+      raf: (t: number) => void;
+      destroy: () => void;
+    } | null = null;
 
     void import("lenis").then((mod) => {
       const Lenis = mod.default;
@@ -182,4 +204,3 @@ function SmoothScrollProvider({ children }: { children: ReactNode }) {
 
   return <>{children}</>;
 }
-

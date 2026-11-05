@@ -12,7 +12,12 @@ export type CreatedPaymentOrder = {
   original_amount?: number;
   discount_amount?: number;
   final_amount?: number;
-  coupon_applied?: string | null;
+  coupon_applied?: boolean;
+};
+
+export type CreateSleepResetOrderOptions = {
+  cohortId?: string;
+  couponCode?: string;
 };
 
 export type VerifiedPayment = {
@@ -38,7 +43,7 @@ type PaymentFunctionResponse = {
   original_amount?: number;
   discount_amount?: number;
   final_amount?: number;
-  coupon_applied?: string | null;
+  coupon_applied?: boolean;
   enrolled?: boolean;
 };
 
@@ -119,7 +124,7 @@ async function requireAuthenticatedSession() {
 }
 
 export async function createSleepResetOrder(
-  cohortId?: string,
+  options: CreateSleepResetOrderOptions = {},
 ): Promise<CreatedPaymentOrder> {
   await requireAuthenticatedSession();
 
@@ -127,9 +132,16 @@ export async function createSleepResetOrder(
   let error: unknown;
 
   try {
-    const body: Record<string, string> = { product_slug: "sleep-reset" };
-    if (cohortId?.trim()) {
-      body.cohort_id = cohortId.trim();
+    const body: Record<string, string> = {
+      product_slug: "sleep-reset",
+    };
+
+    if (options.cohortId?.trim()) {
+      body.cohort_id = options.cohortId.trim();
+    }
+
+    if (options.couponCode?.trim()) {
+      body.coupon_code = options.couponCode.trim().toUpperCase();
     }
 
     const result = await supabase.functions.invoke("create-order", {
